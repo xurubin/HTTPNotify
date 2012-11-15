@@ -28,12 +28,20 @@ class JsonHandler(webapp.RequestHandler):
         result.update(data)
         self.outputJson(result)
         
+def getRequestEntry(request):
+    return {
+            'url' : request.get('url', None),
+            'regex' : request.get('regex', ''),
+            'interval' : request.get('interval', '3600'),
+            'telnum' : request.get('telnum', ''),
+            }
 class AddEntryHandler(JsonHandler):
     ''' 
     Add new entry to the data store, returns its id upon success
     Need to start cron job as well. 
     '''
     def post(self):
+        entry = getRequestEntry(self.request)
         self.outputData({id : 1})
         
 class UpdateEntryHandler(JsonHandler):
@@ -42,6 +50,8 @@ class UpdateEntryHandler(JsonHandler):
     '''
     def post(self, url_id):
         eid = int(url_id)
+        entry = getRequestEntry(self.request)
+        
         self.outputData({id : eid})
 
 class ResetEntryHandler(JsonHandler):
