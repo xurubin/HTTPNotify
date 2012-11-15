@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>HTTPNotify</title>
+		<meta name="description" content="Watch HTTP conent and notify users of change by SMS">
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
+		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/redmond/jquery-ui.css">
+		<style>
+			#listview {
+				margin: auto
+			}
+			.entry {
+				border: 1px dotted black;
+				padding: 3px;
+				margin: 5px;
+			}
+		</style>
+		<script>
+		function NewEntryDiv(content) {
+			var template = $("#TemplateEntry");
+			var entry = template.clone(true).hide();
+			template.before(entry);
+			SetEntryContent(entry, content);			
+			entry.children('[name="Add"]').hide();
+			entry.children('[name="Save"]').show();
+			entry.children('[name="Delete"]').show();
+			entry.children('[name="Recheck"]').show();
+
+			entry.show("slide", {direction: "up"});
+		};
+		function SetEntryContent(entry, content) {
+			entry.attr('id', content.id);
+			entry.children('[name="URL"]').val(content.url);
+			entry.children('[name="Regex"]').val(content.regex);
+			entry.children('[name="Phone"]').val(content.telnum);
+			entry.children('[name="Interval"]').val(content.interval);
+			entry.children('[name="LastCheck"]').val(content.mtime);
+			entry.children('[name="Status"]').val(content.status);
+		};
+		function GetEntryContent(entry) {
+			return {
+				id: entry.attr('id'),
+				url: entry.children('[name="URL"]').val(),
+				regex: entry.children('[name="Regex"]').val(), 
+				interval: entry.children('[name="Interval"]').val(),
+				telnum: entry.children('[name="Phone"]').val(),
+			};
+		};
+		function AddEntry(entry) {
+			var params = GetEntryContent(entry);
+			$.ajax({ 
+				url: "/add",
+				type: "POST",
+				data: params,
+				dataType: "json",
+				}).done(function(data) {
+					if (data.result)
+						NewEntryDiv(data.entry);
+				}).fail(function(jqXHR, textStatus) {
+					alert( "Request failed: " + textStatus );
+				});
+		};
+		function SaveEntry(entry) {
+			
+		};
+		function DeleteEntry(entry) {
+			
+		};
+		function RecheckEntry(entry) {
+			
+		};
+		
+		function initEntryDiv(entry) {
+			$(entry).children("[name='Add']").click(function() {
+				AddEntry($(entry));
+			});
+			$(entry).children("[name='Save']").click(function() {
+				SaveEntry($(entry));
+			});
+			$(entry).children("[name='Delete']").click(function() {
+				DeleteEntry($(entry));
+			});
+			$(entry).children("[name='Recheck']").click(function() {
+				RecheckEntry($(entry));
+			});
+			
+			$(entry).children('[name="Add"]').show();
+			$(entry).children('[name="Save"]').hide();
+			$(entry).children('[name="Delete"]').hide();
+			$(entry).children('[name="Recheck"]').hide();
+			
+		}
+		</script>
+		<script>
+		$(document).ready( function() {
+			initEntryDiv(".entry");
+ 			{% for entry in entries %}
+ 			NewEntryDiv({{ entry|safe  }});
+    		{% endfor %}			
+		});
+		</script>
+	</head>
+	<body>
+		<div id='listview'>
+			<div id="TemplateEntry" name='WatchEntry' class="entry">
+				<label>URL: </label> <input name='URL' /> 
+				<br />
+				<lable>Regex: </lable> <input name='Regex' />
+				<br />
+				<lable>Phone Number: </lable> <input name='Phone' />
+				<br />
+				<lable>Interval: </lable><input name="Interval" />
+				<lable>Status: </lable> <span name="Status"></span>
+				<lable>last Check: </lable><span name="LastCheck"></span>
+				<button name="Recheck">Recheck</button>
+				<br />
+				<button name="Add">Add</button>
+				<button name="Save">Save</button>
+				<button name="Delete">Delete</button>
+			</div>
+		</div>
+	</body>
+</html>
