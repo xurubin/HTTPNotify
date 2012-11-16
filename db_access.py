@@ -6,6 +6,7 @@ import datetime
 from google.appengine.ext import db
 from google.appengine.api import users
 
+import constant
 
 class UrlRequest(db.Model):
 
@@ -13,12 +14,12 @@ class UrlRequest(db.Model):
     url = db.StringProperty(required=True)
     regex = db.StringProperty(required=True)
     status = db.StringProperty(required=True,
-                               choices=set(['assigned',
-                                            'finished',
-                                            'failed']))
+                               choices=set([constant.ASSIGNED,
+                                            constant.FINISHED,
+                                            constant.FAILED]))
     phone = db.PhoneNumberProperty(required=True)
     ctime = db.DateTimeProperty(auto_now_add=True)
-    mtime = db.DateTimeProperty(auto_now=True)
+    mtime = db.DateTimeProperty()
 
 def entity_dict(entity):
     """Convert an entity to a dict."""
@@ -35,7 +36,7 @@ def add_entity(url, regex, phone):
     """"""
     entity = UrlRequest(url=url,
                         regex=regex,
-                        status='assigned',
+                        status=constant.ASSIGNED,
                         phone=phone)
     entity.put()
     return entity_dict(entity)
@@ -54,8 +55,7 @@ def delete_all():
 
 def retrieve_by_id(id):
     """"""
-    entity = UrlRequest.get_by_id(id)
-    return entity_dict(entity)
+    return entity_dict(UrlRequest.get_by_id(id))
 
 
 def retrieve_all():
@@ -70,10 +70,10 @@ def retrieve_all():
     return info
 
 
-def update_entity(id, url=None, regex=None, phone=None, status=None):
+def update_entity(id, url=None, regex=None, phone=None, status=None, mtime=None):
     """Given a id, update this entity"""
     entity = UrlRequest.get_by_id(id)
-    if not (url or regex or phone or status):
+    if not (url or regex or phone or status or mtime):
         return None
     if url:
         entity.url = url
@@ -83,21 +83,7 @@ def update_entity(id, url=None, regex=None, phone=None, status=None):
         entity.phone = phone
     if status:
         entity.status = status
-    entity.put()
-    return entity_dict(entity)
-
-
-def update_failed(id):
-    """If a job is failed, update the entity status to failed."""
-    entity = UrlRequest.get_by_id(id)
-    entity.status='failed'
-    entity.put()
-    return entity_dict(entity)
-
-
-def update_finished(id):
-    """If a job is finished, update the entity status to finished."""
-    entity = UrlRequest.get_by_id(id)
-    entity.status='finished'
+    if mtime:
+        entity.mtime = mtime
     entity.put()
     return entity_dict(entity)
