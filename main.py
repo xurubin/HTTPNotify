@@ -50,7 +50,8 @@ class JsonHandler(webapp.RequestHandler):
         result = {'result' : True}
         result.update(data)
         self.outputJson(result)
-
+    def outputEntity(self, entity):
+        self.outputData({'entry' : entity})
 
 def getRequestEntry(request):
     return {'url' : request.get('url', None),
@@ -62,7 +63,7 @@ def getRequestEntry(request):
 
 class RefreshAllHandler(JsonHandler):
     """Refresh all the registered job in datastore and iterate all the job."""
-    def post(self):
+    def get(self):
         for job_info in db_access.retrieve_all():
             if job_info['status'] == constant.ASSIGNED:
                 utils.do_job(job_info)
@@ -70,12 +71,12 @@ class RefreshAllHandler(JsonHandler):
 
 class RefreshOneHandler(JsonHandler):
     """Refresh one registrered job in datastore and do job."""
-    def post(self, url_id):
+    def get(self, url_id):
         eid = int(url_id)
         job_info = db_access.retrieve_by_id(eid)
         if job_info['status'] == constant.ASSIGNED:
             job_info = utils.do_job(job_info)
-        self.outputData(job_info)
+        self.outputEntity(job_info)
         
 
 class AddEntryHandler(JsonHandler):
@@ -89,7 +90,7 @@ class AddEntryHandler(JsonHandler):
                                      entry['regex'],
                                      entry['phone'])
         if entity:
-            self.outputData({"entry" : entity})
+            self.outputEntity(entity)
         else:
             self.outputError("Cannot add entry.")
 
@@ -106,7 +107,7 @@ class UpdateEntryHandler(JsonHandler):
                                      entry['regex'],
                                      entry['phone'])
         if entity:
-            self.outputData({"entry" : entity})
+            self.outputEntity(entity)
         else:
             self.outputError("Cannot update entry.")
 
@@ -119,7 +120,7 @@ class ResetEntryHandler(JsonHandler):
         eid = int(url_id)
         entity = db_access.update_entity(eid, status='assigned')
         if entity:
-            self.outputData({"entry" : entity})
+            self.outputEntity(entity)
         else:
             self.outputError("Cannot reset entry status.")
 
@@ -140,7 +141,7 @@ application = webapp.WSGIApplication([('/', MainPage),
                                       (r'^/reset/(\d+)$',   ResetEntryHandler),
                                       (r'^/delete/(\d+)$',  DeleteEntryHandler),
                                       (r'^/refresh/(\d+)$', RefreshOneHandler),
-                                      (r'^/refreshall$', RefreshALLHandler),
+                                      (r'^/refreshall$',    RefreshAllHandler),
                                       ], debug=True)
 
 
