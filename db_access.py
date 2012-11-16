@@ -74,7 +74,8 @@ def retrieve_all():
                     'regex': thing.regex,
                     'status': thing.status,
                     'ctime': thing.ctime,
-                    'mtime': thing.mtime
+                    'mtime': thing.mtime,
+                    'phone': thing.phone
                     }
     return info
 
