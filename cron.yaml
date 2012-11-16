@@ -1,0 +1,4 @@
+cron:
+- description: refresh all web pages in the data store
+  url: /refreshall
+  schedule: every 1 mins
