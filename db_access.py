@@ -74,7 +74,7 @@ def update_entity(id, url=None, regex=None, phone=None, status=None, mtime=None)
     """Given a id, update this entity"""
     entity = UrlRequest.get_by_id(id)
     if not (url or regex or phone or status or mtime):
-        return
+        return None
     if url:
         entity.url = url
     if regex:
