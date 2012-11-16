@@ -20,6 +20,16 @@ class UrlRequest(db.Model):
     ctime = db.DateTimeProperty(auto_now_add=True)
     mtime = db.DateTimeProperty(auto_now=True)
 
+def entity_dict(entity):
+    """Convert an entity to a dict."""
+    return {'id': entity.key().id()
+            'url': entity.url,
+            'regex': entity.regex,
+            'phone': entity.phone,
+            'ctime': entity.ctime,
+            'mtime': entity.mtime,
+            'status': entity.status}
+
 
 def add_entity(url, regex, phone):
     """"""
@@ -28,19 +38,13 @@ def add_entity(url, regex, phone):
                         status='assigned',
                         phone=phone)
     entity.put()
-    return {'id': entity.key().id(),
-            'entry': {'url': url,
-                      'regex': regex,
-                      'phone': phone,
-                      'status': entity.status
-                     }
-           }
+    return entity_dict(entity)
 
 
 def delete_entity(id):
     """Givin a id, delete an entity."""
-    thing = UrlRequest.get_by_id(id)
-    thing.delete()
+    entity = UrlRequest.get_by_id(id)
+    entity.delete()
 
 
 def delete_all():
@@ -50,14 +54,8 @@ def delete_all():
 
 def retrieve_by_id(id):
     """"""
-    thing = UrlRequest.get_by_id(id)
-    return {id: {'url': thing.url,
-                 'regex': thing.regex,
-                 'status': thing.status,
-                 'ctime': thing.ctime,
-                 'mtime': thing.mtime
-                 }
-            }
+    entity = UrlRequest.get_by_id(id)
+    return entity_dict(entity)
 
 
 def retrieve_all():
@@ -65,55 +63,41 @@ def retrieve_all():
     
     :return info: dict, key: id, value: dict
     """
-    info = {}
+    info = []
     entities = UrlRequest.all()
     for entity in entities:
-        id = entity.key().id()
-        thing = UrlRequest.get_by_id(id)
-        info[id] = {'url': thing.url,
-                    'regex': thing.regex,
-                    'status': thing.status,
-                    'ctime': thing.ctime,
-                    'mtime': thing.mtime,
-                    'phone': thing.phone
-                    }
+        info.append(entity_dict(entity))
     return info
 
 
 def update_entity(id, url=None, regex=None, phone=None, status=None):
     """Given a id, update this entity"""
-    thing = UrlRequest.get_by_id(id)
+    entity = UrlRequest.get_by_id(id)
     if not (url or regex or phone or status):
         return
     if url:
-        thing.url = url
+        entity.url = url
     if regex:
-        thing.regex = regex
+        entity.regex = regex
     if phone:
-        thing.phone = phone
+        entity.phone = phone
     if status:
-        thing.status = status
-    thing.put()
-    return {'id': thing.key().id(),
-            'entry': {'url': thing.url,
-                      'regex': thing.regex,
-                      'phone': thing.phone,
-                      'status': thing.status
-                      }
-            }
+        entity.status = status
+    entity.put()
+    return entity_dict(entity)
 
 
 def update_failed(id):
     """If a job is failed, update the entity status to failed."""
-    thing = UrlRequest.get_by_id(id)
-    thing.status='failed'
-    thing.put()
-    return thing.key().id()
+    entity = UrlRequest.get_by_id(id)
+    entity.status='failed'
+    entity.put()
+    return entity_dict(entity)
 
 
 def update_finished(id):
     """If a job is finished, update the entity status to finished."""
-    thing = UrlRequest.get_by_id(id)
-    thing.status='finished'
-    thing.put()
-    return thing.key().id()
+    entity = UrlRequest.get_by_id(id)
+    entity.status='finished'
+    entity.put()
+    return entity_dict(entity)
