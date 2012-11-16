@@ -3,11 +3,15 @@
 # Date: Nov 15 2012
 import json
 import os
-import db_access
 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
+
+import constant
+import db_access
+import utils
+
 
 class MainPage(webapp.RequestHandler):
     
@@ -24,7 +28,7 @@ class MainPage(webapp.RequestHandler):
 
         path = os.path.join(os.path.dirname(__file__), 'index.html')
         self.response.out.write(template.render(path, template_values))
-        self.response.out.write(db_access.update_entity(20, url='fuck dave jonse'))
+        self.response.out.write(db_access.retrieve_all())
 
 
 class JsonHandler(webapp.RequestHandler):
@@ -40,13 +44,30 @@ class JsonHandler(webapp.RequestHandler):
 
 
 def getRequestEntry(request):
-    return {
-            'url' : request.get('url', None),
+    return {'url' : request.get('url', None),
             'regex' : request.get('regex', None),
             'interval' : request.get('interval', '3600'),
             'phone' : request.get('phone', None),
             }
 
+
+class RefreshAllHandler(JsonHandler):
+    """Refresh all the registered job in datastore and iterate all the job."""
+    def post(self):
+        for job_info in db_access.retrieve_all():
+            if job_info['status'] == constant.ASSIGNED:
+                utils.do_job(job_info)
+
+
+class RefreshOneHandler(JsonHandler):
+    """Refresh one registrered job in datastore and do job."""
+    def post(self, url_id):
+        eid = int(url_id)
+        job_info = db_access.retrieve_by_id(eid)
+        if job_info['status'] == constant.ASSIGNED:
+            job_info = utils.do_job(job_info)
+        self.outputData(job_info)
+        
 
 class AddEntryHandler(JsonHandler):
     ''' 
@@ -73,15 +94,6 @@ class UpdateEntryHandler(JsonHandler):
                                                 phone=entry['phone']))
 
 
-class ResetEntryHandler(JsonHandler):
-    '''
-    Reset the status and possibly restart cron job of the given entry 
-    '''
-    def post(self, url_id):
-        eid = int(url_id)
-        self.outputData(db_access.update_entity(eid, status='assigned'))
-
-
 class DeleteEntryHandler(JsonHandler):
     '''
     Delete the given entry 
@@ -106,9 +118,10 @@ class RefreshEntryHandler(JsonHandler):
 application = webapp.WSGIApplication([('/', MainPage),
                                       (r'^/add$',           AddEntryHandler),
                                       (r'^/update/(\d+)$',  UpdateEntryHandler),
-                                      (r'^/reset/(\d+)$',   ResetEntryHandler),
+                                      (r'^/reset/(\d+)$',   RefreshOneHandler),
                                       (r'^/delete/(\d+)$',  DeleteEntryHandler),
                                       (r'^/refresh/(\d+)$', RefreshEntryHandler),
+                                      (r'^/refreshall$', RefreshALLHandler),
                                       ], debug=True)
 
 

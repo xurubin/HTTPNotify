@@ -1,8 +1,13 @@
 # Author: monkeylyf
 # Data: Nov 14 2012
 
+import datetime
 import re
 import urllib2
+
+import constant
+import db_access
+import smsgateway
 
 def url_content_search(regex, url):
     """Search content of pass-in url for pass-in regex pattern."""
@@ -10,10 +15,23 @@ def url_content_search(regex, url):
         handler = urllib2.urlopen(url)
         str = handler.read()
         handler.close()
-    except Exception, e:
-        raise Exception
-    m = re.search(regex, str)
-    if m:
-        return True
-    else:
-        return False
+        m = re.search(regex, str)
+        if m:
+            return constant.FINISHED
+        else:
+            return constant.ASSIGNED
+    except:
+        return constant.FAILED
+
+def do_job(job_info):
+    """Do job logic.
+    
+    :return updated job info: dict, no matter the job failed or finished or
+    still assigned.
+    """
+    result = url_content_search(job_info['regex'], job_info['url'])
+    if result == constant.FINISHED
+        smsgateway.SMSGateway().send(job_info['phone'], text)
+    return db_access.update_entity(job_info['id'],
+                                   status=result,
+                                   mtime=datetime.datetime.now())
