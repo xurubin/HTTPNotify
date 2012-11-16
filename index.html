@@ -59,28 +59,49 @@
 			entry.slideDown();
 		};
 		function UpdateEntryContent(entry, content) {
-			if ('id' in content)
-				entry.attr('id', content.id);
-			if ('url' in content)
+			if (content == "clear")
+				entry.attr('eid', "");
+			else if ('id' in content)
+				entry.attr('eid', content.id);
+				
+			if (content == "clear")
+				entry.find('[name="URL"]').val("");
+			else if (content == null || 'url' in content)
 				entry.find('[name="URL"]').val(content.url);
-			if ('regex' in content)
+				
+			if (content == "clear")
+				entry.find('[name="Regex"]').val("");
+			else if ('regex' in content)
 				entry.find('[name="Regex"]').val(content.regex);
-			if ('telnum' in content)
-				entry.find('[name="Phone"]').val(content.telnum);
-			if ('interval' in content)
+				
+			if (content == "clear")
+				entry.find('[name="Phone"]').val("");
+			else if ('phone' in content)
+				entry.find('[name="Phone"]').val(content.phone);
+				
+			if (content == "clear")
+				entry.find('[name="Interval"]').val("");
+			else if ('interval' in content)
 				entry.find('[name="Interval"]').val(content.interval);
-			if ('mtime' in content)
-				entry.find('[name="LastCheck"]').html(content.mtime);
-			if ('status' in content)
+				
+			if (content == "clear")
+				entry.find('[name="LastCheck"]').html("");
+			else if ('mtime' in content) {
+				d = new Date(content.mtime * 1000);
+				entry.find('[name="LastCheck"]').html(d.toLocaleDateString() + " " + d.toLocaleTimeString());
+			}
+			if (content == "clear")
+				entry.find('[name="Status"]').html("");
+			else if ('status' in content)
 				entry.find('[name="Status"]').html(content.status);
 		};
 		function GetEntryContent(entry) {
 			return {
-				id: entry.attr('id'),
+				id: entry.attr('eid'),
 				url: entry.find('[name="URL"]').val(),
 				regex: entry.find('[name="Regex"]').val(), 
 				interval: entry.find('[name="Interval"]').val(),
-				telnum: entry.find('[name="Phone"]').val(),
+				phone: entry.find('[name="Phone"]').val(),
 			};
 		};
 		function AddEntry(entry) {
@@ -94,17 +115,21 @@
 				}}).always(function() {
 					entry.find('.loading').removeClass("ajax-loading");
 				}).done(function(data) {
-					if (data.result)
-						NewEntryDiv(data.entry);
+					if (data.result) {
+						NewEntryDiv(data.entry, data.entry);
+						UpdateEntryContent($("#TemplateEntry"), "clear");
+					} else
+						alert(data.error);
 				}).fail(function(jqXHR, textStatus) {
 					alert( "AddEntry Request failed: " + textStatus );
 				});
 		};
 		function SaveEntry(entry) {
 			$.ajax({ 
-				url: "/update/" + entry.attr('id'),
+				url: "/update/" + entry.attr('eid'),
 				type: "POST",
 				dataType: "json",
+				data: GetEntryContent(entry),
 				beforeSend : function() {
 					entry.find('.loading').addClass("ajax-loading");
 				}}).always(function() {
@@ -112,26 +137,29 @@
 				}).done(function(data) {
 					if (data.result)
 						UpdateEntryContent(entry, data.entry);
+					else
+						alert(data.error);
 				}).fail(function(jqXHR, textStatus) {
 					alert( "SaveEntry Request failed: " + textStatus );
 				});
 		};
 		function DeleteEntry(entry) {
 			$.ajax({ 
-				url: "/delete/" + entry.attr('id'),
+				url: "/delete/" + entry.attr('eid'),
 				type: "POST",
 				dataType: "json",
 				}).done(function(data) {
 					if (data.result) {
 						entry.slideUp(400, function() {entry.remove()});
-					}
+					} else
+						alert(data.error);
 				}).fail(function(jqXHR, textStatus) {
 					alert( "DeleteEntry Request failed: " + textStatus );
 				});
 		};
 		function RecheckEntry(entry) {
 			$.ajax({ 
-				url: "/refresh/" + entry.attr('id'),
+				url: "/refresh/" + entry.attr('eid'),
 				type: "GET",
 				dataType: "json",
 				beforeSend : function() {
@@ -141,13 +169,15 @@
 				}).done(function(data) {
 					if (data.result)
 						UpdateEntryContent(entry, data.entry);
+					else
+						alert(data.error);
 				}).fail(function(jqXHR, textStatus) {
 					alert( "RecheckEntry Request failed: " + textStatus );
 				});
 		};
 		function ResetEntry(entry) {
 			$.ajax({ 
-				url: "/reset/" + entry.attr('id'),
+				url: "/reset/" + entry.attr('eid'),
 				type: "POST",
 				dataType: "json",
 				beforeSend : function() {
@@ -157,26 +187,31 @@
 				}).done(function(data) {
 					if (data.result) 
 						UpdateEntryContent(entry, data.entry);
+					else
+						alert(data.error);
 				}).fail(function(jqXHR, textStatus) {
 					alert( "ResetEntry Request failed: " + textStatus );
 				});
 		};
 		
 		function initEntryDiv(entry) {
+			function getEntry(o) {
+				return $($(o).parents(".entry"));
+			}
 			$(entry).find("[name='Add']").click(function() {
-				AddEntry($(this).parents(".entry"));
+				AddEntry(getEntry(this));
 			});
 			$(entry).find("[name='Save']").click(function() {
-				SaveEntry($(this).parents(".entry"));
+				SaveEntry(getEntry(this));
 			});
 			$(entry).find("[name='Delete']").click(function() {
-				DeleteEntry($(this).parents(".entry"));
+				DeleteEntry(getEntry(this));
 			});
 			$(entry).find("[name='Reset']").click(function() {
-				ResetEntry($(this).parents(".entry"));
+				ResetEntry(getEntry(this));
 			});
 			$(entry).find("[name='Recheck']").click(function() {
-				RecheckEntry($(this).parents(".entry"));
+				RecheckEntry(getEntry(this));
 			});
 			
 			$(entry).find('[name="Add"]').show();
@@ -188,27 +223,25 @@
 		}
 		$(document).ready( function() {
 			$('<img/>')[0].src = "static/ajax-loader.gif"; // Preload image
+
 			initEntryDiv(".entry");
-    		$("#loading").ajaxStart(function(){
-			  $(this).show();
-			}).ajaxStop(function(){
-			  $(this).hide();
-			});
+
 		});
 		</script>
 		<script>
-		$(document).ready( function() {
- 			{% for entry in entries %}
- 			NewEntryDiv({{ entry|safe  }});
-    		{% endfor %}
-		});
+			$(document).ready( function() {
+				{% for entry in entries %}
+					NewEntryDiv({{ entry|safe  }});
+				{% endfor %}
+			});
 		</script>
+		
 	</head>
 	<body>
 		<div id='listview'>
 			<div id="TemplateEntry" name='WatchEntry' class="entry">
 				<span class="container">
-					<label>URL: </label> <input name='URL' /></span> 
+					<label>URL: </label> <input name='URL' />
 				</span>
 				<span class="container">
 					<label>Regex: </label> <input name='Regex' />

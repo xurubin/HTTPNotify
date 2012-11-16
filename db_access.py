@@ -22,7 +22,7 @@ class UrlRequest(db.Model):
 
 def entity_dict(entity):
     """Convert an entity to a dict."""
-    return {'id': entity.key().id()
+    return {'id': entity.key().id(),
             'url': entity.url,
             'regex': entity.regex,
             'phone': entity.phone,
@@ -74,7 +74,7 @@ def update_entity(id, url=None, regex=None, phone=None, status=None):
     """Given a id, update this entity"""
     entity = UrlRequest.get_by_id(id)
     if not (url or regex or phone or status):
-        return
+        return None
     if url:
         entity.url = url
     if regex:

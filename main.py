@@ -4,33 +4,41 @@
 import json
 import os
 import db_access
+import datetime
+import calendar
 
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+class EntityEncoder(json.JSONEncoder):
+    """ 
+    Special JSON encoder for Entity, which converts a 
+    datetime to a string representation
+    """
+    def default(self, obj):
+        if isinstance(obj, datetime.datetime):
+            #return "new Date.UTC(%d, %d, %d, %d, %d, %d, %d)" % \
+            #    (obj.year, obj.month, obj.day, obj.hour, obj.minute, obj.second, obj.microsecond)
+            return  calendar.timegm(obj.utctimetuple())
+        else:
+            return json.JSONEncoder.default(self, obj)
+   
 class MainPage(webapp.RequestHandler):
     
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
-        template_values = {
-            'entries': [json.dumps({'id' : 'adfa',
-                                    'url' : 'http://www.google.com',
-                                    'regex' : 'google',
-                                    'phone': '12345689',
-                                    'mtime' : '2012-11-11',
-                                    'interval' : 60}),]
-                         }
+        
+        template_values = {'entries' : [json.dumps(e, cls=EntityEncoder) for e in db_access.retrieve_all()]}
 
         path = os.path.join(os.path.dirname(__file__), 'index.html')
         self.response.out.write(template.render(path, template_values))
-        self.response.out.write(db_access.update_entity(20, url='fuck dave jonse'))
 
 
 class JsonHandler(webapp.RequestHandler):
     def outputJson(self, obj):
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.out.write(json.dumps(obj))
+        self.response.out.write(json.dumps(obj, cls=EntityEncoder))
     def outputError(self, error):
         self.outputJson({'result' : False, 'error' : error})
     def outputData(self, data):
@@ -55,9 +63,14 @@ class AddEntryHandler(JsonHandler):
     '''
     def post(self):
         entry = getRequestEntry(self.request)
-        self.outputData(db_access.add_entity(entry['url'],
-                                             entry['regex'],
-                                             entry['phone']))
+        entity = db_access.add_entity(entry['url'],
+                                     entry['regex'],
+                                     entry['phone'])
+        if entity:
+            self.outputData({"entry" : entity})
+        else:
+            self.outputError("Cannot add entry.")
+
 
 
 class UpdateEntryHandler(JsonHandler):
@@ -67,10 +80,14 @@ class UpdateEntryHandler(JsonHandler):
     def post(self, url_id):
         eid = int(url_id)
         entry = getRequestEntry(self.request)
-        self.outputData(db_access.update_entity(eid,
-                                                url=entry['url'],
-                                                regex=entry['regex'],
-                                                phone=entry['phone']))
+        entity = db_access.update_entity(eid, 
+                                     entry['url'],
+                                     entry['regex'],
+                                     entry['phone'])
+        if entity:
+            self.outputData({"entry" : entity})
+        else:
+            self.outputError("Cannot update entry.")
 
 
 class ResetEntryHandler(JsonHandler):
@@ -79,7 +96,11 @@ class ResetEntryHandler(JsonHandler):
     '''
     def post(self, url_id):
         eid = int(url_id)
-        self.outputData(db_access.update_entity(eid, status='assigned'))
+        entity = db_access.update_entity(eid, status='assigned')
+        if entity:
+            self.outputData({"entry" : entity})
+        else:
+            self.outputError("Cannot reset entry status.")
 
 
 class DeleteEntryHandler(JsonHandler):
