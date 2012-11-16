@@ -9,116 +9,232 @@
 		<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.0/themes/redmond/jquery-ui.css">
 		<style>
 			#listview {
-				margin: auto
+				margin: auto;
+				width: 600px;
 			}
 			.entry {
 				border: 1px dotted black;
 				padding: 3px;
 				margin: 5px;
 			}
+			input{
+ 			   width: 100%
+			}
+			span.container {
+			    display: block;
+			    overflow: hidden;
+			    padding-right:10px;
+			}
+			span.content {
+				display: inline-block;
+				min-width:200px;
+			}
+			div.loading {
+				display:inline;
+				float: right;
+				width:32px; 
+				height:32px;
+			}	
+			.ajax-loading {
+			    background: url('static/ajax-loader.gif') scroll no-repeat 50% 50% transparent;
+			    width: 100%;
+			    height: 100%;
+			}		
+			#left button{
+			    float: left;
+			}
 		</style>
 		<script>
 		function NewEntryDiv(content) {
 			var template = $("#TemplateEntry");
-			var entry = template.clone(true).hide();
+			var entry = template.clone(true).attr("id", "").hide();
 			template.before(entry);
-			SetEntryContent(entry, content);			
-			entry.children('[name="Add"]').hide();
-			entry.children('[name="Save"]').show();
-			entry.children('[name="Delete"]').show();
-			entry.children('[name="Recheck"]').show();
+			UpdateEntryContent(entry, content);			
+			entry.find('[name="Add"]').hide();
+			entry.find('[name="Save"]').show();
+			entry.find('[name="Delete"]').show();
+			entry.find('[name="Recheck"]').show();
+			entry.find('[name="Reset"]').show();
 
-			entry.show("slide", {direction: "up"});
+			entry.slideDown();
 		};
-		function SetEntryContent(entry, content) {
-			entry.attr('id', content.id);
-			entry.children('[name="URL"]').val(content.url);
-			entry.children('[name="Regex"]').val(content.regex);
-			entry.children('[name="Phone"]').val(content.telnum);
-			entry.children('[name="Interval"]').val(content.interval);
-			entry.children('[name="LastCheck"]').val(content.mtime);
-			entry.children('[name="Status"]').val(content.status);
+		function UpdateEntryContent(entry, content) {
+			if ('id' in content)
+				entry.attr('id', content.id);
+			if ('url' in content)
+				entry.find('[name="URL"]').val(content.url);
+			if ('regex' in content)
+				entry.find('[name="Regex"]').val(content.regex);
+			if ('telnum' in content)
+				entry.find('[name="Phone"]').val(content.telnum);
+			if ('interval' in content)
+				entry.find('[name="Interval"]').val(content.interval);
+			if ('mtime' in content)
+				entry.find('[name="LastCheck"]').html(content.mtime);
+			if ('status' in content)
+				entry.find('[name="Status"]').html(content.status);
 		};
 		function GetEntryContent(entry) {
 			return {
 				id: entry.attr('id'),
-				url: entry.children('[name="URL"]').val(),
-				regex: entry.children('[name="Regex"]').val(), 
-				interval: entry.children('[name="Interval"]').val(),
-				telnum: entry.children('[name="Phone"]').val(),
+				url: entry.find('[name="URL"]').val(),
+				regex: entry.find('[name="Regex"]').val(), 
+				interval: entry.find('[name="Interval"]').val(),
+				telnum: entry.find('[name="Phone"]').val(),
 			};
 		};
 		function AddEntry(entry) {
-			var params = GetEntryContent(entry);
 			$.ajax({ 
 				url: "/add",
 				type: "POST",
-				data: params,
+				data: GetEntryContent(entry),
 				dataType: "json",
+				beforeSend : function() {
+					entry.find('.loading').addClass("ajax-loading");
+				}}).always(function() {
+					entry.find('.loading').removeClass("ajax-loading");
 				}).done(function(data) {
 					if (data.result)
 						NewEntryDiv(data.entry);
 				}).fail(function(jqXHR, textStatus) {
-					alert( "Request failed: " + textStatus );
+					alert( "AddEntry Request failed: " + textStatus );
 				});
 		};
 		function SaveEntry(entry) {
-			
+			$.ajax({ 
+				url: "/update/" + entry.attr('id'),
+				type: "POST",
+				dataType: "json",
+				beforeSend : function() {
+					entry.find('.loading').addClass("ajax-loading");
+				}}).always(function() {
+					entry.find('.loading').removeClass("ajax-loading");
+				}).done(function(data) {
+					if (data.result)
+						UpdateEntryContent(entry, data.entry);
+				}).fail(function(jqXHR, textStatus) {
+					alert( "SaveEntry Request failed: " + textStatus );
+				});
 		};
 		function DeleteEntry(entry) {
-			
+			$.ajax({ 
+				url: "/delete/" + entry.attr('id'),
+				type: "POST",
+				dataType: "json",
+				}).done(function(data) {
+					if (data.result) {
+						entry.slideUp(400, function() {entry.remove()});
+					}
+				}).fail(function(jqXHR, textStatus) {
+					alert( "DeleteEntry Request failed: " + textStatus );
+				});
 		};
 		function RecheckEntry(entry) {
-			
+			$.ajax({ 
+				url: "/refresh/" + entry.attr('id'),
+				type: "GET",
+				dataType: "json",
+				beforeSend : function() {
+					entry.find('.loading').addClass("ajax-loading");
+				}}).always(function() {
+					entry.find('.loading').removeClass("ajax-loading");
+				}).done(function(data) {
+					if (data.result)
+						UpdateEntryContent(entry, data.entry);
+				}).fail(function(jqXHR, textStatus) {
+					alert( "RecheckEntry Request failed: " + textStatus );
+				});
+		};
+		function ResetEntry(entry) {
+			$.ajax({ 
+				url: "/reset/" + entry.attr('id'),
+				type: "POST",
+				dataType: "json",
+				beforeSend : function() {
+					entry.find('.loading').addClass("ajax-loading");
+				}}).always(function() {
+					entry.find('.loading').removeClass("ajax-loading");
+				}).done(function(data) {
+					if (data.result) 
+						UpdateEntryContent(entry, data.entry);
+				}).fail(function(jqXHR, textStatus) {
+					alert( "ResetEntry Request failed: " + textStatus );
+				});
 		};
 		
 		function initEntryDiv(entry) {
-			$(entry).children("[name='Add']").click(function() {
-				AddEntry($(entry));
+			$(entry).find("[name='Add']").click(function() {
+				AddEntry($(this).parents(".entry"));
 			});
-			$(entry).children("[name='Save']").click(function() {
-				SaveEntry($(entry));
+			$(entry).find("[name='Save']").click(function() {
+				SaveEntry($(this).parents(".entry"));
 			});
-			$(entry).children("[name='Delete']").click(function() {
-				DeleteEntry($(entry));
+			$(entry).find("[name='Delete']").click(function() {
+				DeleteEntry($(this).parents(".entry"));
 			});
-			$(entry).children("[name='Recheck']").click(function() {
-				RecheckEntry($(entry));
+			$(entry).find("[name='Reset']").click(function() {
+				ResetEntry($(this).parents(".entry"));
+			});
+			$(entry).find("[name='Recheck']").click(function() {
+				RecheckEntry($(this).parents(".entry"));
 			});
 			
-			$(entry).children('[name="Add"]').show();
-			$(entry).children('[name="Save"]').hide();
-			$(entry).children('[name="Delete"]').hide();
-			$(entry).children('[name="Recheck"]').hide();
+			$(entry).find('[name="Add"]').show();
+			$(entry).find('[name="Save"]').hide();
+			$(entry).find('[name="Reset"]').hide();
+			$(entry).find('[name="Delete"]').hide();
+			$(entry).find('[name="Recheck"]').hide();
 			
 		}
+		$(document).ready( function() {
+			$('<img/>')[0].src = "static/ajax-loader.gif"; // Preload image
+			initEntryDiv(".entry");
+    		$("#loading").ajaxStart(function(){
+			  $(this).show();
+			}).ajaxStop(function(){
+			  $(this).hide();
+			});
+		});
 		</script>
 		<script>
 		$(document).ready( function() {
-			initEntryDiv(".entry");
  			{% for entry in entries %}
  			NewEntryDiv({{ entry|safe  }});
-    		{% endfor %}			
+    		{% endfor %}
 		});
 		</script>
 	</head>
 	<body>
 		<div id='listview'>
 			<div id="TemplateEntry" name='WatchEntry' class="entry">
-				<label>URL: </label> <input name='URL' /> 
+				<span class="container">
+					<label>URL: </label> <input name='URL' /></span> 
+				</span>
+				<span class="container">
+					<label>Regex: </label> <input name='Regex' />
+				</span>
+				<span class="container">
+					<label>Phone Number: </label> <input name='Phone' />
+				</span>
+				<span class="container">
+					<label>Interval: </label><input name="Interval" />
+				</span>
+				
+				<span class="content">
+					<label>Status: </label> <span name="Status"></span>
+				</span>
+				<button name="Reset">Reset</button>
 				<br />
-				<lable>Regex: </lable> <input name='Regex' />
-				<br />
-				<lable>Phone Number: </lable> <input name='Phone' />
-				<br />
-				<lable>Interval: </lable><input name="Interval" />
-				<lable>Status: </lable> <span name="Status"></span>
-				<lable>last Check: </lable><span name="LastCheck"></span>
+				
+				<span class="content">
+					<label>Last Check: </label><span name="LastCheck"></span>
+				</span>
 				<button name="Recheck">Recheck</button>
 				<br />
 				<button name="Add">Add</button>
 				<button name="Save">Save</button>
 				<button name="Delete">Delete</button>
+				<div class='loading'></div>
 			</div>
 		</div>
 	</body>
