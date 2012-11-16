@@ -8,6 +8,7 @@ import config
 import urllib
 import urllib2
 import base64
+import json
 
 class SMSGateway():
     SMS_API_URL = "https://api.twilio.com/2010-04-01/Accounts/%s/SMS/Messages.json"
@@ -16,6 +17,13 @@ class SMSGateway():
         self.setToken(config.Twilio_SID, config.Twilio_TOKEN)
         self.senderNum = config.Twilio_SendNumber
         
+    def handleError(self, errtext):
+        try:
+            errtext = json.loads(errtext)['message']
+        except:
+            pass
+        raise Exception("Request error: " + errtext)    
+        
     def request(self, URL, params):
         request = urllib2.Request(URL % self.sid, urllib.urlencode(params))
         encoded_auth = base64.b64encode('%s:%s' % (self.sid, self.token))
@@ -23,14 +31,12 @@ class SMSGateway():
         try:   
             response = urllib2.urlopen(request)
         except urllib2.HTTPError as e:
-            raise Exception("Request error: " + e.read())    
+            self.handleError(e.read())
 
         if response.code == 200 or response.code == 201:
             return True
         else:
-            print response.code
-            raise Exception("Request error: " + response.read())    
-        
+            self.handleError(response.read())
     def setToken(self, sid, token):
         self.sid = sid
         self.token = token

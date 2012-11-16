@@ -10,6 +10,7 @@ from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
 
+import logging
 import constant
 import db_access
 import utils
@@ -45,6 +46,7 @@ class JsonHandler(webapp.RequestHandler):
         self.response.headers['Content-Type'] = 'application/json'
         self.response.out.write(json.dumps(obj, cls=EntityEncoder))
     def outputError(self, error):
+        logging.error("Error occurred: " + error)
         self.outputJson({'result' : False, 'error' : error})
     def outputData(self, data):
         result = {'result' : True}
@@ -74,10 +76,12 @@ class RefreshOneHandler(JsonHandler):
     def get(self, url_id):
         eid = int(url_id)
         job_info = db_access.retrieve_by_id(eid)
-        if job_info['status'] == constant.ASSIGNED:
-            job_info = utils.do_job(job_info)
-        self.outputEntity(job_info)
-        
+        try:
+            if job_info['status'] == constant.ASSIGNED:
+                job_info = utils.do_job(job_info)
+            self.outputEntity(job_info)
+        except Exception as e:
+            self.outputError(str(e))
 
 class AddEntryHandler(JsonHandler):
     ''' 
