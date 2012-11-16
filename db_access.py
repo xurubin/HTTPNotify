@@ -13,7 +13,9 @@ class UrlRequest(db.Model):
     url = db.StringProperty(required=True)
     regex = db.StringProperty(required=True)
     status = db.StringProperty(required=True,
-                               choices=set(['assigned', 'finished', 'failed']))
+                               choices=set(['assigned',
+                                            'finished',
+                                            'failed']))
     phone = db.PhoneNumberProperty(required=True)
     ctime = db.DateTimeProperty(auto_now_add=True)
     mtime = db.DateTimeProperty(auto_now=True)
@@ -26,6 +28,13 @@ def add_entity(url, regex, phone):
                         status='assigned',
                         phone=phone)
     entity.put()
+    return {'id': entity.key().id(),
+            'entry': {'url': url,
+                      'regex': regex,
+                      'phone': phone,
+                      'status': entity.status
+                     }
+           }
 
 
 def delete_entity(id):
@@ -39,28 +48,41 @@ def delete_all():
     db.delete(UrlRequest.all())
 
 
+def retrieve_by_id(id):
+    """"""
+    thing = UrlRequest.get_by_id(id)
+    return {id: {'url': thing.url,
+                 'regex': thing.regex,
+                 'status': thing.status,
+                 'ctime': thing.ctime,
+                 'mtime': thing.mtime
+                 }
+            }
+
+
 def retrieve_all():
     """Retrieve all the row stored in database.
     
-    :return shit: dict, key: id, value: dict
+    :return info: dict, key: id, value: dict
     """
-    shit = {}
+    info = {}
     entities = UrlRequest.all()
     for entity in entities:
         id = entity.key().id()
         thing = UrlRequest.get_by_id(id)
-        shit[id] = {'url': thing.url,
+        info[id] = {'url': thing.url,
                     'regex': thing.regex,
                     'status': thing.status,
                     'ctime': thing.ctime,
-                    'mtime': thing.mtime}
-    return shit
+                    'mtime': thing.mtime
+                    }
+    return info
 
 
-def update_entity(id, url=None, regex=None, phone=None):
+def update_entity(id, url=None, regex=None, phone=None, status=None):
     """Given a id, update this entity"""
     thing = UrlRequest.get_by_id(id)
-    if not (url or regex or phone):
+    if not (url or regex or phone or status):
         return
     if url:
         thing.url = url
@@ -68,7 +90,16 @@ def update_entity(id, url=None, regex=None, phone=None):
         thing.regex = regex
     if phone:
         thing.phone = phone
+    if status:
+        thing.status = status
     thing.put()
+    return {'id': thing.key().id(),
+            'entry': {'url': thing.url,
+                      'regex': thing.regex,
+                      'phone': thing.phone,
+                      'status': thing.status
+                      }
+            }
 
 
 def update_failed(id):
@@ -76,6 +107,7 @@ def update_failed(id):
     thing = UrlRequest.get_by_id(id)
     thing.status='failed'
     thing.put()
+    return thing.key().id()
 
 
 def update_finished(id):
@@ -83,3 +115,4 @@ def update_finished(id):
     thing = UrlRequest.get_by_id(id)
     thing.status='finished'
     thing.put()
+    return thing.key().id()

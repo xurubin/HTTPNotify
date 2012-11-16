@@ -1,21 +1,31 @@
+# Main logic.
+# Author: xurubin, monkeylyf
+# Date: Nov 15 2012
+import json
+import os
+import db_access
+
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp import template
 from google.appengine.ext.webapp.util import run_wsgi_app
-import json
-import os
 
 class MainPage(webapp.RequestHandler):
-    
     
     def get(self):
         self.response.headers['Content-Type'] = 'text/html'
         template_values = {
-            'entries': [json.dumps({'id' : 'adfa', 'url' : 'http://www.google.com', 'regex' : 'google', 'telnum': '12345689', 'mtime' : '2012-11-11', 'interval' : 60}),
-                        ]
-        }
+            'entries': [json.dumps({'id' : 'adfa',
+                                    'url' : 'http://www.google.com',
+                                    'regex' : 'google',
+                                    'phone': '12345689',
+                                    'mtime' : '2012-11-11',
+                                    'interval' : 60}),]
+                         }
 
         path = os.path.join(os.path.dirname(__file__), 'index.html')
         self.response.out.write(template.render(path, template_values))
+        self.response.out.write(db_access.update_entity(20, url='fuck dave jonse'))
+
 
 class JsonHandler(webapp.RequestHandler):
     def outputJson(self, obj):
@@ -27,14 +37,17 @@ class JsonHandler(webapp.RequestHandler):
         result = {'result' : True}
         result.update(data)
         self.outputJson(result)
-        
+
+
 def getRequestEntry(request):
     return {
             'url' : request.get('url', None),
-            'regex' : request.get('regex', ''),
+            'regex' : request.get('regex', None),
             'interval' : request.get('interval', '3600'),
-            'telnum' : request.get('telnum', ''),
+            'phone' : request.get('phone', None),
             }
+
+
 class AddEntryHandler(JsonHandler):
     ''' 
     Add new entry to the data store, returns its id upon success
@@ -42,8 +55,11 @@ class AddEntryHandler(JsonHandler):
     '''
     def post(self):
         entry = getRequestEntry(self.request)
-        self.outputData({id : 1})
-        
+        self.outputData(db_access.add_entity(entry['url'],
+                                             entry['regex'],
+                                             entry['phone']))
+
+
 class UpdateEntryHandler(JsonHandler):
     '''
     Update the given entry 
@@ -51,8 +67,11 @@ class UpdateEntryHandler(JsonHandler):
     def post(self, url_id):
         eid = int(url_id)
         entry = getRequestEntry(self.request)
-        
-        self.outputData({id : eid})
+        self.outputData(db_access.update_entity(eid,
+                                                url=entry['url'],
+                                                regex=entry['regex'],
+                                                phone=entry['phone']))
+
 
 class ResetEntryHandler(JsonHandler):
     '''
@@ -60,7 +79,8 @@ class ResetEntryHandler(JsonHandler):
     '''
     def post(self, url_id):
         eid = int(url_id)
-        self.outputData({id : eid})
+        self.outputData(db_access.update_entity(eid, status='assigned'))
+
 
 class DeleteEntryHandler(JsonHandler):
     '''
@@ -68,7 +88,9 @@ class DeleteEntryHandler(JsonHandler):
     '''
     def post(self, url_id):
         eid = int(url_id)
-        self.outputData({id : eid})
+        db_access.delete_entity(eid)
+        self.outputData({})
+
 
 class RefreshEntryHandler(JsonHandler):
     '''
@@ -78,7 +100,7 @@ class RefreshEntryHandler(JsonHandler):
     '''
     def get(self, url_id):
         eid = int(url_id)
-        self.outputData({id : eid})
+        self.outputData(db_access.retrieve_by_id(eid))
 
 
 application = webapp.WSGIApplication([('/', MainPage),
