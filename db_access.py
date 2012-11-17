@@ -11,15 +11,15 @@ import constant
 class UrlRequest(db.Model):
 
     """The request entity."""
-    url = db.StringProperty(required=True)
-    regex = db.StringProperty(required=True)
-    status = db.StringProperty(required=True,
+    url = db.StringProperty(required=True, indexed=False)
+    regex = db.StringProperty(required=True, indexed=False)
+    status = db.StringProperty(required=True, indexed=False,
                                choices=set([constant.ASSIGNED,
                                             constant.FINISHED,
                                             constant.FAILED]))
-    phone = db.PhoneNumberProperty(required=True)
-    ctime = db.DateTimeProperty(auto_now_add=True)
-    mtime = db.DateTimeProperty()
+    phone = db.PhoneNumberProperty(required=True, indexed=False)
+    ctime = db.DateTimeProperty(auto_now_add=True, indexed=False)
+    mtime = db.DateTimeProperty(indexed=False)
 
 def entity_dict(entity):
     """Convert an entity to a dict."""
