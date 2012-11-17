@@ -4,4 +4,4 @@
 FINISHED = 'finished'
 ASSIGNED = 'assigned'
 FAILED = 'failed'
-TEXT = "FUCK OFF!!!!!!!"
+TEXT = "The web page you are watching just updated!"
